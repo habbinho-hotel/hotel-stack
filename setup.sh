@@ -26,13 +26,20 @@ else
   echo "[ok] .env já existe (mantido)"
 fi
 
-# gamedata: o que o repositório do Polaris já traz (imagens básicas e partes de emblema de grupo).
+# gamedata: assets copiados do repositório do Polariser.
 # O resto (furni, roupas, config/*.json...) você coloca aqui; veja o README.
 mkdir -p gamedata/images gamedata/c_images/groupbadge/badgeparts
+
 # -n: não sobrescreve arquivos que você já tenha colocado (o aviso "non-portable" do cp novo é só ruído)
 cp -rn polaris-emulator/Assets/images/.     gamedata/images/ 2> >(grep -v 'non-portable' >&2 || true)
 cp -rn polaris-emulator/Assets/badgeparts/. gamedata/c_images/groupbadge/badgeparts/ 2> >(grep -v 'non-portable' >&2 || true)
-echo "[ok] gamedata/ preparado"
+
+# Copiar subpastas adicionais de imagens que o cliente Octane espera
+for folder in additions events furniextras navigator reception rules wallet; do
+  cp -rn polaris-emulator/Assets/images/$folder/     gamedata/images/$folder/ 2> >(grep -v 'non-portable' >&2 || true)
+done
+
+echo "[ok] gamedata/ preparado (imagens e badgeparts ampliados)"
 
 echo
 echo "Próximos passos:"
