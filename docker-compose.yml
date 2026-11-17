@@ -1,0 +1,71 @@
+# Hotel (Polaris + Octane) só com o essencial: banco, emulador e cliente web.
+# Uso: ./setup.sh && docker compose build && docker compose up -d
+name: hotel
+
+services:
+  # Banco de dados. Não é publicado no host: só o Polaris enxerga (rede interna do compose).
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?rode ./setup.sh primeiro}
+      MARIADB_DATABASE: ${DB_NAME:-habbo}
+      MARIADB_USER: ${DB_USER:-polaris}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?rode ./setup.sh primeiro}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Emulador (Java 25). Na primeira subida cria o schema sozinho (migrations automáticas).
+  polaris:
+    build:
+      context: .
+      dockerfile: docker/polaris/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOTEL_DB_HOST: db
+      HOTEL_DB_PORT: "3306"
+      HOTEL_DB_NAME: ${DB_NAME:-habbo}
+      HOTEL_DB_USER: ${DB_USER:-polaris}
+      HOTEL_DB_PASSWORD: ${DB_PASSWORD:?rode ./setup.sh primeiro}
+      HOTEL_PUBLIC_URL: http://${HOTEL_HOST:-localhost}:${HTTP_PORT:-8080}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx2g}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - polaris-data:/data # segredos gerados no primeiro start
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${EMU_PORT:-2096}:2096" # WebSocket + API HTTP usados pelo cliente
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/2096"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+  # Cliente Octane (build estático) + gamedata servidos pelo nginx.
+  client:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: http://${HOTEL_HOST:-localhost}:${HTTP_PORT:-8080}
+      PUBLIC_WS_URL: ws://${HOTEL_HOST:-localhost}:${EMU_PORT:-2096}
+      PUBLIC_API_URL: http://${HOTEL_HOST:-localhost}:${EMU_PORT:-2096}
+    volumes:
+      - ./gamedata:/usr/share/nginx/gamedata:ro
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+
+volumes:
+  db-data:
+  polaris-data:
