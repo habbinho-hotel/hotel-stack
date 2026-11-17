@@ -42,6 +42,7 @@ services:
       TZ: ${TZ:-UTC}
     volumes:
       - polaris-data:/data # segredos gerados no primeiro start
+      - ./gamedata:/var/www/gamedata:ro
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${EMU_PORT:-2096}:2096" # WebSocket + API HTTP usados pelo cliente
     healthcheck:

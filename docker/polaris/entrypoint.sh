@@ -10,6 +10,7 @@ APP_DIR="${APP_DIR:-/app}"
 DATA_DIR="${DATA_DIR:-/data}"
 CFG="$APP_DIR/config.ini"
 cp "$APP_DIR/config.ini.example" "$CFG"
+mkdir -p "$DATA_DIR/generated/badgeparts"
 
 # set_kv chave valor: troca o valor da chave (ou acrescenta no fim). Sem sed, para não
 # quebrar com caracteres especiais em senhas.
@@ -55,4 +56,4 @@ case "${HOTEL_PUBLIC_URL:-}" in
 esac
 
 # shellcheck disable=SC2086  # JAVA_OPTS é uma lista de flags, de propósito sem aspas
-exec java -Dfile.encoding=UTF8 ${JAVA_OPTS:--Xmx2g} -jar "$APP_DIR/polaris.jar"
+exec java -Dfile.encoding=UTF8 ${JAVA_OPTS:--Xmx2g} -jar "$APP_DIR/polaris.jar" "$@"
