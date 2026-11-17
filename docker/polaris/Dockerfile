@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# ---- build: compila o JAR com Maven e JDK 21 ----
-FROM eclipse-temurin:21 AS build
+# ---- build: compila o JAR com Maven e JDK 25 ----
+FROM eclipse-temurin:25 AS build
 RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/*
 
 WORKDIR /build/Emulator
