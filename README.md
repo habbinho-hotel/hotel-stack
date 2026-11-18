@@ -24,6 +24,19 @@ O cliente busca tudo em `http://localhost:8080/gamedata/`, que é a pasta `./gam
 | `furniture/`, `clothes/`, `effect/`, `pets/`, `room/` | bundles `.hab` / `.nitro` |
 | `icons/`, `sounds/`, `c_images/` | ícones, sons, emblemas e imagens de catálogo |
 
+## Fonte opcional: HabboAssets (API pública)
+
+O `setup.sh` pode mesclar itens do espelho público [HabboAssets](https://www.habboassets.com/) sem necessidade de token:
+
+| O que adiciona | Endpoint | Onde cai em `gamedata/` |
+|---|---|---|
+| Badges (todos do hotel) | `/api/v2/badges/zip` | `c_images/` (não sobrescreve existentes) |
+| Sons (MP3) | `/api/v2/sounds` | `sounds/` (não sobrescreve existentes) |
+
+Ative com `HABBO_ASSETS=1` (e opcionalmente `HABBO_HOTEL_ID=1`) no `.env`, depois rode `./setup.sh` novamente. Demanda rede, então fica desligado por padrão para manter o setup rápido.
+
+Móveis da HabboAssets exigem um token de API (gratuito, criado no site); móveis já vêm do repositório `sphynxkitten/nitro-assets` integrado pelo `setup.sh`.
+
 ## Primeiro usuário e admin
 
 Registre uma conta na tela do Octane e dê rank 7 a ela:

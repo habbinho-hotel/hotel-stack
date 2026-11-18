@@ -190,6 +190,44 @@ else
   done
 fi
 
+# === HABBOASSETS.COM API MERGE ===
+# Adiciona itens do espelho público https://www.habboassets.com/
+# (sem token: badges e sons. Móveis exigem token — veja o README.)
+if [ "${HABBO_ASSETS:-0}" = "1" ]; then
+  echo ""
+  echo "[habboassets] Mesclando itens da API pública (hotel ${HABBO_HOTEL_ID:=1})..."
+
+  # Badges — um ZIP com todos os badges do hotel; nunca sobrescreve o que já existe.
+  if curl -fsSL "https://www.habboassets.com/api/v2/badges/zip?hotel_id=${HABBO_HOTEL_ID}&format=gif" \
+      -o /tmp/habboassets-badges.zip 2>/dev/null; then
+    unzip -n -q /tmp/habboassets-badges.zip -d gamedata/c_images/ 2>/dev/null || true
+    rm -f /tmp/habboassets-badges.zip
+    echo "  [habboassets] badges mesclados em gamedata/c_images/"
+  else
+    echo "  [habboassets] falha ao baixar badges (rede?)"
+  fi
+
+  # Sons — cada mp3 individual; nunca sobrescreve o que já existe.
+  mkdir -p gamedata/sounds
+  page=1
+  while true; do
+    data=$(curl -fsSL "https://www.habboassets.com/api/v2/sounds?per_page=500&page=${page}" 2>/dev/null) || break
+    [ -z "$data" ] && break
+    count=$(printf '%s' "$data" | jq '.data | length' 2>/dev/null || echo 0)
+    [ "$count" = "0" ] && break
+    printf '%s' "$data" | jq -r '.data[] | .url + "\t" + .name' 2>/dev/null \
+      | while IFS=$'\t' read -r url name; do
+          dst="gamedata/sounds/${name}"
+          [ -f "$dst" ] && continue
+          curl -fsSL "$url" -o "$dst" 2>/dev/null || true
+        done
+    last=$(printf '%s' "$data" | jq '.meta.last_page // 1' 2>/dev/null || echo 1)
+    [ "$page" -ge "$last" ] && break
+    page=$((page + 1))
+  done
+  echo "  [habboassets] sons em gamedata/sounds/"
+fi
+
 echo "  [ok] gamedata/ pronto"
 
 # ==========================================
