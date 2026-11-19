@@ -32,10 +32,11 @@ O `setup.sh` pode mesclar itens do espelho público [HabboAssets](https://www.ha
 |---|---|---|
 | Badges (todos do hotel) | `/api/v2/badges/zip` | `c_images/` (não sobrescreve existentes) |
 | Sons (MP3) | `/api/v2/sounds` | `sounds/` (não sobrescreve existentes) |
+| Móveis (.nitro → `.hab`) | `/api/v2/furniture` + `/furniture/zip` | `furniture/nitro/` (exige token) |
 
 Ative com `HABBO_ASSETS=1` (e opcionalmente `HABBO_HOTEL_ID=1`) no `.env`, depois rode `./setup.sh` novamente. Demanda rede, então fica desligado por padrão para manter o setup rápido.
 
-Móveis da HabboAssets exigem um token de API (gratuito, criado no site); móveis já vêm do repositório `sphynxkitten/nitro-assets` integrado pelo `setup.sh`.
+Móveis exigem um token de API da HabboAssets — coloque em `HABBO_API_TOKEN` no `.env` (grátis, criado no site). Móveis já vêm do repositório `sphynxkitten/nitro-assets` integrado pelo `setup.sh`; esta etapa adiciona os do espelho da HabboAssets por cima.
 
 ## Primeiro usuário e admin
 

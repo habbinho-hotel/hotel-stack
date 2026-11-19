@@ -226,6 +226,75 @@ if [ "${HABBO_ASSETS:-0}" = "1" ]; then
     page=$((page + 1))
   done
   echo "  [habboassets] sons em gamedata/sounds/"
+
+  # Móveis — exigem token. Lista todos os classnames (paginado) e baixa em lotes
+  # de 100 via /api/v2/furniture/zip (formato nitro → .hab), sem sobrescrever.
+  if [ -n "${HABBO_API_TOKEN:-}" ]; then
+    mkdir -p gamedata/furniture/nitro
+    tmpclass=/tmp/habboassets-classnames.txt
+    : > "$tmpclass"
+    page=1
+    while true; do
+      data=$(curl -fsSL -H "Authorization: Bearer ${HABBO_API_TOKEN}" \
+          "https://www.habboassets.com/api/v2/furniture?per_page=100&page=${page}&hotel_id=${HABBO_HOTEL_ID}" \
+          2>/dev/null) || break
+      [ -z "$data" ] && break
+      count=$(printf '%s' "$data" | jq '.data | length' 2>/dev/null || echo 0)
+      [ "$count" = "0" ] && break
+      printf '%s' "$data" | jq -r '.data[].classname' 2>/dev/null >> "$tmpclass"
+      last=$(printf '%s' "$data" | jq '.meta.last_page // 1' 2>/dev/null || echo 1)
+      [ "$page" -ge "$last" ] && break
+      page=$((page + 1))
+    done
+    total=$(wc -l < "$tmpclass" 2>/dev/null || echo 0)
+    echo "  [habboassets] $total classnames de móveis listados"
+
+    i=0
+    batch=""
+    while IFS= read -r cls; do
+      [ -z "$cls" ] && continue
+      batch="$batch${batch:+,}$cls"
+      i=$((i + 1))
+      if [ "$i" -ge 100 ]; then
+        if curl -fsSL -H "Authorization: Bearer ${HABBO_API_TOKEN}" \
+            "https://www.habboassets.com/api/v2/furniture/zip?classnames=${batch}&format=nitro&hotel_id=${HABBO_HOTEL_ID}" \
+            -o /tmp/habboassets-furni.zip 2>/dev/null; then
+          unzip -n -q /tmp/habboassets-furni.zip -d gamedata/furniture/nitro/ 2>/dev/null || true
+          rm -f /tmp/habboassets-furni.zip
+        else
+          echo "  [habboassets] falha no lote de móveis (rede?)"
+        fi
+        i=0
+        batch=""
+      fi
+    done < "$tmpclass"
+    # lote restante
+    if [ -n "$batch" ]; then
+      if curl -fsSL -H "Authorization: Bearer ${HABBO_API_TOKEN}" \
+          "https://www.habboassets.com/api/v2/furniture/zip?classnames=${batch}&format=nitro&hotel_id=${HABBO_HOTEL_ID}" \
+          -o /tmp/habboassets-furni.zip 2>/dev/null; then
+        unzip -n -q /tmp/habboassets-furni.zip -d gamedata/furniture/nitro/ 2>/dev/null || true
+        rm -f /tmp/habboassets-furni.zip
+      else
+        echo "  [habboassets] falha no lote final de móveis (rede?)"
+      fi
+    fi
+    rm -f "$tmpclass"
+    echo "  [habboassets] móveis em gamedata/furniture/nitro/"
+
+    # Renomeia .nitro -> .hab para o cliente reconhecer (sem sobrescrever .hab existentes)
+    if [ -d gamedata/furniture/nitro ]; then
+      mkdir -p gamedata/furniture
+      for f in gamedata/furniture/nitro/*.nitro; do
+        [ -f "\$f" ] || continue
+        dst="gamedata/furniture/$(basename "\$f" .nitro).hab"
+        [ -f "\$dst" ] || cp -n "\$f" "\$dst" 2>/dev/null || true
+      done
+      echo "  [habboassets] .nitro renomeados para .hab em gamedata/furniture/"
+    fi
+  else
+    echo "  [habboassets] HABBO_API_TOKEN não definido — móveis pulados"
+  fi
 fi
 
 echo "  [ok] gamedata/ pronto"
