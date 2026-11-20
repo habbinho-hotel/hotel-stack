@@ -58,7 +58,12 @@ echo ""
 echo "[3/7] Setting up gamedata assets..."
 
 # Create directory structure
-mkdir -p gamedata/images gamedata/c_images/groupbadge/badgeparts
+mkdir -p gamedata/config gamedata/images gamedata/c_images/groupbadge/badgeparts
+
+# O Octane precisa desses textos para concluir a inicialização depois do login.
+if [ ! -e gamedata/config/UITexts.jsonc ]; then
+  cp habbinho-client/gamedata/config/UITexts.jsonc gamedata/config/UITexts.jsonc
+fi
 
 # Copy from Polar emulator (base assets)
 echo "  [copy] Assets from Polar emulator..."
@@ -340,17 +345,20 @@ echo "[6/7] Verifying setup..."
 sleep 3
 
 # Check client configs are generated
-if docker compose exec client ls /usr/share/nginx/html/configuration/renderer-config.json >/dev/null 2>&1; then
+if docker compose exec -T client ls /usr/share/nginx/html/configuration/renderer-config.json >/dev/null 2>&1; then
   echo "  [ok] renderer-config.json generated"
 else
   echo "  [warn] renderer-config.json not yet generated, waiting..."
   sleep 5
 fi
 
-if docker compose exec client curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1/gamedata/config/FigureData.json" | grep -q '200'; then
-  echo "  [ok] gamedata config files accessible"
+if docker compose exec -T client sh -c '
+  wget -q -O /dev/null http://127.0.0.1/gamedata/config/FigureData.json &&
+  wget -q -O /dev/null http://127.0.0.1/gamedata/config/UITexts.jsonc
+'; then
+  echo "  [ok] FigureData.json e UITexts.jsonc acessíveis"
 else
-  echo "  [warn] gamedata config files may need more time"
+  echo "  [warn] FigureData.json ou UITexts.jsonc indisponível em /gamedata/config/"
 fi
 
 # ==========================================
