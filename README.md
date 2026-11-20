@@ -16,7 +16,15 @@ Abra `http://localhost:8080`. Na primeira subida o Polaris cria o schema sozinho
 
 ## Assets (obrigatório para o cliente carregar)
 
-O cliente busca tudo em `http://localhost:8080/gamedata/`, que é a pasta `./gamedata`. O `setup.sh` já coloca o pouco que vem no repositório do Polaris. O resto você gera/baixa com o [All-in-1 Converter](https://github.com/duckietm/all-in-1-converter) (ou **Assets → Habbo assets** no All-in-1 Manager) e copia para cá:
+O cliente busca os arquivos de `./gamedata/` em `http://localhost:8080/gamedata/`. O `setup.sh` copia os assets do emulador e importa o Nitro de `.cache/nitro-assets/`, baixando o repositório nessa pasta quando necessário.
+
+Para reaproveitar uma cópia existente, defina `NITRO_ASSETS_DIR` no `.env` ou passe a variável ao executar o setup. Caminhos relativos partem da raiz da stack.
+
+```bash
+NITRO_ASSETS_DIR="$HOME/nitro-assets" ./setup.sh
+```
+
+Você também pode gerar ou baixar arquivos com o [All-in-1 Converter](https://github.com/duckietm/all-in-1-converter) (ou **Assets → Habbo assets** no All-in-1 Manager) e copiá-los para `gamedata/`.
 
 | Pasta em `gamedata/` | Conteúdo |
 |---|---|

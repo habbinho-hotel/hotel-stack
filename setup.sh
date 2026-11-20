@@ -82,24 +82,19 @@ done
 
 echo "  [nitro-assets] Integrando conjunto completo de assets..."
 
-# Caminho onde o nitro-assets pode estar localizado
-NITRO_ASSETS_DIR="$HOME/nitro-assets"
+NITRO_ASSETS_DIR="${NITRO_ASSETS_DIR:-.cache/nitro-assets}"
+case "$NITRO_ASSETS_DIR" in
+  /*) ;;
+  *) NITRO_ASSETS_DIR="$PWD/$NITRO_ASSETS_DIR" ;;
+esac
 
-# Se o diretório já existir, usa-o; senão tenta baixar
-if [ -d "$NITRO_ASSETS_DIR" ]; then
-  echo "  [nitro-assets] Diretório encontrado localmente!"
-else
-  echo "  [nitro-assets] Tentando baixar do GitHub..."
-  if git clone --depth 1 https://github.com/sphynxkitten/nitro-assets.git "$NITRO_ASSETS_DIR" 2>/dev/null; then
-    echo "  [nitro-assets] Repositório baixado com sucesso!"
-  else
-    echo "  [nitro-assets] Não foi possível baixar - usando assets do Polar emulator"
-    NITRO_ASSETS_DIR=""
-  fi
-fi
-
-# Integrate assets if directory exists
-if [ -n "$NITRO_ASSETS_DIR" ] && [ -d "$NITRO_ASSETS_DIR" ]; then
+nitro_assets_integrated=0
+if [ -d "$NITRO_ASSETS_DIR" ] || {
+  echo "  [nitro-assets] Baixando do GitHub para $NITRO_ASSETS_DIR"
+  mkdir -p -- "$(dirname -- "$NITRO_ASSETS_DIR")" &&
+    git clone --depth 1 https://github.com/sphynxkitten/nitro-assets.git "$NITRO_ASSETS_DIR"
+}; then
+  echo "  [nitro-assets] Usando arquivos de $NITRO_ASSETS_DIR"
   # Copiar arquivos de configuração (o repo nitro-assets não tem pasta config/: os JSONs
   # ficam em clothes/json, furniture/json, effects/json e gamedata/json).
   # -f de propósito: os stubs vazios de gamedata/config são substituídos pelos reais.
@@ -143,7 +138,9 @@ if [ -n "$NITRO_ASSETS_DIR" ] && [ -d "$NITRO_ASSETS_DIR" ]; then
   mkdir -p gamedata/c_images
   cp -rn gamedata/images/. gamedata/c_images/ 2>/dev/null || true
   # Ícones de mobiliário
-  [ -e gamedata/icons ] || ln -s furniture/icons gamedata/icons
+  if [ ! -e gamedata/icons ] && [ ! -L gamedata/icons ]; then
+    ln -s furniture/icons gamedata/icons
+  fi
   echo "  [nitro-assets] .hab de roupas/efeitos/móveis e c_images prontos"
 
   # Copiar imagens completas
@@ -179,6 +176,7 @@ if [ -n "$NITRO_ASSETS_DIR" ] && [ -d "$NITRO_ASSETS_DIR" ]; then
     echo "  [nitro-assets] Habbo pages copiadas"
   fi
 
+  nitro_assets_integrated=1
   echo "  [nitro-assets] Conjunto completo integrado com sucesso!"
 else
   echo "  [nitro-assets] Usando assets do Polar emulator como fallback"
@@ -383,15 +381,14 @@ cat <<'SQL_COMMAND'
 SQL_COMMAND
 echo "        # dentro do SQL: UPDATE users SET \`rank\` = 7 WHERE username = 'SeuNome';"
 echo ""
-echo "Full assets (recommended):"
-echo "  Para assets completos (furni, roupas, catálogo, sons):"
-echo "    - Baixe https://github.com/sphynxkitten/nitro-assets"
-echo "    - Coloque na pasta ~/nitro-assets"
-echo "    - Reexecute este script ou copie manualmente para gamedata/"
-echo ""
-echo "Limited assets (current - hotel boots successfully):"
-echo "  - Login e navegação básica funcionam"
-echo "  - Móveis, avatares e catálogo limitado (usando assets do Polar)"
+if [ "$nitro_assets_integrated" -eq 1 ]; then
+  echo "Assets Nitro importados de $NITRO_ASSETS_DIR"
+else
+  echo "Usando os assets do emulador. Para importar os assets Nitro:"
+  echo "  Baixe https://github.com/sphynxkitten/nitro-assets em $NITRO_ASSETS_DIR"
+  echo "  Ou aponte NITRO_ASSETS_DIR para uma cópia existente."
+  echo "  Depois, execute ./setup.sh novamente."
+fi
 echo ""
 echo "To restart or reconfigure:"
 echo "  docker compose down && docker compose up -d"

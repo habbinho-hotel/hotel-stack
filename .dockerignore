@@ -4,6 +4,7 @@
 **/target
 .env
 gamedata
+.cache
 polaris-emulator
 habbinho-emulator/Database
 habbinho-emulator/Assets

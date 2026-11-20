@@ -1,5 +1,6 @@
 # Gerado pelo monorepo-splitter
 .env
 gamedata/
+/.cache/
 /habbinho-client/
 /habbinho-emulator/
