@@ -4,7 +4,8 @@
 **/target
 .env
 gamedata
-polaris-emulator/Database
-polaris-emulator/Assets
-polaris-emulator/docs
-polaris-emulator/e2e
+polaris-emulator
+habbinho-emulator/Database
+habbinho-emulator/Assets
+habbinho-emulator/docs
+habbinho-emulator/e2e

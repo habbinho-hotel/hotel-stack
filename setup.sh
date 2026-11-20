@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install script for Hotel (Polaris + habbinho-client) with nitro-assets integration
-# Usage: bash /home/o/Downloads/hotel-docker/setup.sh
+# Install script for Hotel (habbinho-emulator + habbinho-client) with nitro-assets integration
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -14,7 +13,7 @@ if [ -f .env ]; then
 fi
 
 echo "========================================="
-echo "  Hotel (Polaris + habbinho-client) Installation"
+echo "  Hotel (habbinho-emulator + habbinho-client) Installation"
 echo "========================================="
 
 # ==========================================
@@ -33,8 +32,8 @@ clone() {
   fi
 }
 
-clone polaris-emulator https://github.com/duckietm/Polaris-Emulator.git
-clone habbinho-client  https://github.com/habbinho-hotel/habbinho-client.git
+clone habbinho-emulator git@github.com:habbinho-hotel/habbinho-emulator.git
+clone habbinho-client  git@github.com:habbinho-hotel/habbinho-client.git
 
 echo "  [ok] Todos os repositórios clonados (ou já existiam)"
 
@@ -65,12 +64,12 @@ mkdir -p gamedata/images gamedata/c_images/groupbadge/badgeparts
 
 # Copy from Polar emulator (base assets)
 echo "  [copy] Assets from Polar emulator..."
-cp -rn polaris-emulator/Assets/images/.     gamedata/images/ 2> >(grep -v 'non-portable' >&2 || true)
-cp -rn polaris-emulator/Assets/badgeparts/. gamedata/c_images/groupbadge/badgeparts/ 2> >(grep -v 'non-portable' >&2 || true)
+cp -rn habbinho-emulator/Assets/images/.     gamedata/images/ 2> >(grep -v 'non-portable' >&2 || true)
+cp -rn habbinho-emulator/Assets/badgeparts/. gamedata/c_images/groupbadge/badgeparts/ 2> >(grep -v 'non-portable' >&2 || true)
 
 # Copy additional folders expected by Octane client
 for folder in additions events furniextras navigator reception rules wallet; do
-  cp -rn polaris-emulator/Assets/images/$folder/     gamedata/images/$folder/ 2> >(grep -v 'non-portable' >&2 || true)
+  cp -rn habbinho-emulator/Assets/images/$folder/     gamedata/images/$folder/ 2> >(grep -v 'non-portable' >&2 || true)
 done
 
 # === NITRO-ASSETS INTEGRATION ===
@@ -181,11 +180,11 @@ if [ -n "$NITRO_ASSETS_DIR" ] && [ -d "$NITRO_ASSETS_DIR" ]; then
 else
   echo "  [nitro-assets] Usando assets do Polar emulator como fallback"
   echo "  [copy] Assets from Polar emulator..."
-  cp -rn polaris-emulator/Assets/images/.     gamedata/images/ 2> >(grep -v 'non-portable' >&2 || true)
-  cp -rn polaris-emulator/Assets/badgeparts/. gamedata/c_images/groupbadge/badgeparts/ 2> >(grep -v 'non-portable' >&2 || true)
+  cp -rn habbinho-emulator/Assets/images/.     gamedata/images/ 2> >(grep -v 'non-portable' >&2 || true)
+  cp -rn habbinho-emulator/Assets/badgeparts/. gamedata/c_images/groupbadge/badgeparts/ 2> >(grep -v 'non-portable' >&2 || true)
 
   for folder in additions events furniextras navigator reception rules wallet; do
-    cp -rn polaris-emulator/Assets/images/$folder/     gamedata/images/$folder/ 2> >(grep -v 'non-portable' >&2 || true)
+    cp -rn habbinho-emulator/Assets/images/$folder/     gamedata/images/$folder/ 2> >(grep -v 'non-portable' >&2 || true)
   done
 fi
 
