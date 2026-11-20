@@ -23,15 +23,15 @@ render() {
   dst="$CONF/$name.json"
   [ -f "$dst" ] && return 0
   [ -f "$src" ] || { echo "[octane-config] faltando $src" >&2; exit 1; }
-  # A ordem importa: as URLs mais específicas vêm antes da troca genérica de http://localhost
+  # Reserva a URL da API para a substituição do endereço web não capturar seu localhost.
   sed \
-    -e "s|http://localhost/camera/photo/temp|$U/gamedata/camera|g" \
-    -e "s|http://localhost/gamedata/badgeparts/|$U/gamedata/c_images/groupbadge/badgeparts/|g" \
-    -e "s|http://localhost/habbo-imaging/badge/|$U/gamedata/c_images/groupbadge/badge/|g" \
-    -e "s|http://localhost/gamedata/badgeparts/|$U/gamedata/c_images/groupbadge/badgeparts/|g" \
+    -e 's|http://localhost:2096|@PUBLIC_API_URL@|g' \
+    -e 's|http://localhost/camera/photo/temp|http://localhost/gamedata/camera|g' \
+    -e 's|http://localhost/gamedata/badgeparts/|http://localhost/gamedata/c_images/groupbadge/badgeparts/|g' \
+    -e 's|http://localhost/habbo-imaging/badge/|http://localhost/gamedata/c_images/groupbadge/badge/|g' \
     -e "s|http://localhost|$U|g" \
     -e "s|ws://localhost:2096|$W|g" \
-    -e "s|http://localhost:2096|$A|g" \
+    -e "s|@PUBLIC_API_URL@|$A|g" \
     "$src" > "$dst"
 }
 
@@ -39,12 +39,6 @@ render renderer-config
 render ui-config
 render hotlooks
 render news
-
-# Corrige a api.url que o sed pode ter transformado em http://localhost:8080:2096
-# O api.url deve ser http://localhost:2096 (ponto de conexão do game server)
-if [ -f "$CONF/renderer-config.json" ]; then
-  sed -i 's|"api\.url": "http://localhost:8080:2096"|"api.url": "http://localhost:2096"|g' "$CONF/renderer-config.json"
-fi
 
 # Index HTML sem o script do Turnstile (não requer internet a mais)
 cat > /usr/share/nginx/html/index.html << 'INDEXEOF'
