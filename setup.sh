@@ -4,14 +4,6 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Source .env file if it exists (so variables are available even on re-runs)
-if [ -f .env ]; then
-  # shellcheck source=/dev/null
-  set -a
-  . .env
-  set +a
-fi
-
 echo "========================================="
 echo "  Hotel (habbinho-emulator + habbinho-client) Installation"
 echo "========================================="
@@ -52,6 +44,12 @@ if [ ! -f .env ]; then
 else
   echo "  [ok] .env já existe (mantido)"
 fi
+
+# Carrega também o .env recém-criado na primeira execução.
+# shellcheck source=/dev/null
+set -a
+. .env
+set +a
 
 # ==========================================
 # 3. Setup gamedata assets
@@ -363,15 +361,18 @@ echo "========================================="
 echo "  Installation Complete! ✅"
 echo "========================================="
 echo ""
-echo "Hotel accessible at: http://localhost:8080"
-echo "Polaris WebSocket:   ws://localhost:2096"
+hotel_url="http://${HOTEL_HOST:-localhost}:${HTTP_PORT:-8080}"
+echo "Hotel accessible at: $hotel_url"
+echo "Polaris WebSocket:   ws://${HOTEL_HOST:-localhost}:${EMU_PORT:-2096}"
 echo "Database:            MariaDB on port 3306 (internal)"
 echo ""
 echo "Next steps:"
-echo "  1. Open http://localhost:8080 no navegador"
+echo "  1. Abra $hotel_url no navegador"
 echo "  2. Crie uma conta na tela do Octane"
-echo "  3. Dê rank 7 ao usuário via SQL:"
-echo "     docker compose exec db sh -c 'mariadb -uroot -p\"${DB_ROOT_PASSWORD}\" \"${DB_NAME}\"'"
+echo "  3. Para dar acesso de administrador ao usuário, dê rank 7 via SQL:"
+cat <<'SQL_COMMAND'
+     docker compose exec db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'
+SQL_COMMAND
 echo "        # dentro do SQL: UPDATE users SET \`rank\` = 7 WHERE username = 'SeuNome';"
 echo ""
 echo "Full assets (recommended):"
@@ -386,4 +387,4 @@ echo "  - Móveis, avatares e catálogo limitado (usando assets do Polar)"
 echo ""
 echo "To restart or reconfigure:"
 echo "  docker compose down && docker compose up -d"
-echo "  # or: bash /home/o/Downloads/hotel-docker/setup.sh"
+echo "  # ou: ./setup.sh"
