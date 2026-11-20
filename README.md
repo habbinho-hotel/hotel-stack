@@ -64,7 +64,7 @@ Backup do banco (o backup automático do Polaris está desligado porque a imagem
 docker compose exec db sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"' > backup.sql
 ```
 
-Atualizar para versões novas: `git -C polaris-emulator pull`, `git -C Octane pull`, `git -C Octane-Renderer pull`, depois `docker compose build && docker compose up -d`. As migrations rodam sozinhas.
+Atualizar para versões novas: `git -C polaris-emulator pull`, `git -C habbinho-client pull`, depois `docker compose build && docker compose up -d`. As migrations rodam sozinhas.
 
 ## Acessar de outra máquina da rede
 

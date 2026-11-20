@@ -16,14 +16,15 @@
 │   ├── config example/    # config.ini.example (template)
 │   ├── Emulator/          # Maven module with JAR source
 │   └── Assets/            # Basic game assets (images, badgeparts)
-├── Octane/               # Cloned by setup.sh (Git repo)
-│   ├── package.json
-│   ├── vite.config.mjs
-│   ├── public/configuration/  # .example config files (renderer, ui, client-mode, etc.)
-│   └── src/               # Octane source
-├── Octane-Renderer/      # Cloned by setup.sh (Git repo)
-│   ├── package.json
-│   ├── vite.config.js
+├── habbinho-client/      # Cloned by setup.sh (contains Octane + Octane-Renderer)
+│   ├── Octane/
+│   │   ├── package.json
+│   │   ├── vite.config.mjs
+│   │   ├── public/configuration/  # .example config files
+│   │   └── src/
+│   └── Octane-Renderer/
+│       ├── package.json
+│       └── vite.config.js
 │   ├── packages/
 │   └── src/               # Renderer source
 ├── gamedata/             # Prepared by setup.sh (volume mounted to nginx)
@@ -128,23 +129,22 @@ services:
 
 ## 🔧 How to Build Octane + Renderer
 
-The `setup.sh` already handles cloning the 3 repos and preparing `gamedata/`. The actual build happens when you run `docker compose build`.
+The `setup.sh` already handles cloning the Polaris emulator and `habbinho-client`, which already contains Octane and Octane-Renderer, then prepares `gamedata/`. The actual build happens when you run `docker compose build`.
 
 But if you need to build locally (outside Docker) or re-build:
 
 ```bash
 # 1. Clone the repos (setup.sh does this, or run manually):
 git clone --depth 1 https://github.com/duckietm/polaris-emulator.git
-git clone --depth 1 https://github.com/duckietm/Octane.git
-git clone --depth 1 https://github.com/duckietm/Octane-Renderer.git
+git clone --depth 1 https://github.com/habbinho-hotel/habbinho-client.git
 
 # 2. Install dependencies: Renderer FIRST, then Octane
-cd Octane-Renderer && yarn install
+cd habbinho-client/Octane-Renderer && yarn install
 cd ../Octane && yarn install && yarn build
 
 # 3. The build outputs to:
-#   Octane/dist/  (served by nginx as /assets/)
-#   Octane-Renderer/dist/ (merged into Octane/dist during build)
+#   habbinho-client/Octane/dist/  (served by nginx as /assets/)
+#   habbinho-client/Octane-Renderer/dist/ (merged into Octane/dist during build)
 
 # 4. Important config files are generated in public/configuration/:
 #   - renderer-config.json
@@ -259,7 +259,7 @@ open http://localhost:8080
 ```
 
 **First-time flow:**
-1. `setup.sh` clones `polaris-emulator`, `Octane`, `Octane-Renderer` to the project root
+1. `setup.sh` clones `polaris-emulator` and `habbinho-client` to the project root
 2. Creates `.env` with random DB passwords
 3. Copies basic assets from `polaris-emulator/Assets/` into `gamedata/`
 4. `docker compose build` compiles the Polaris JAR and the Octane build

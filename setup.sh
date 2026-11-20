@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install script for Hotel (Polaris + Octane) with nitro-assets integration
+# Install script for Hotel (Polaris + habbinho-client) with nitro-assets integration
 # Usage: bash /home/o/Downloads/hotel-docker/setup.sh
 
 set -euo pipefail
@@ -14,7 +14,7 @@ if [ -f .env ]; then
 fi
 
 echo "========================================="
-echo "  Hotel (Polaris + Octane) Installation"
+echo "  Hotel (Polaris + habbinho-client) Installation"
 echo "========================================="
 
 # ==========================================
@@ -34,8 +34,7 @@ clone() {
 }
 
 clone polaris-emulator https://github.com/duckietm/Polaris-Emulator.git
-clone Octane           https://github.com/duckietm/Octane.git
-clone Octane-Renderer  https://github.com/duckietm/Octane-Renderer.git
+clone habbinho-client  https://github.com/habbinho-hotel/habbinho-client.git
 
 echo "  [ok] Todos os repositórios clonados (ou já existiam)"
 

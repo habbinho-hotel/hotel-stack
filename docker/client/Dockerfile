@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# ---- build: o Octane precisa do Octane-Renderer como pasta IRMÃ (../Octane-Renderer) ----
+# ---- build: habbinho-client já reúne Octane e Octane-Renderer; mantemos ambas como irmãs ----
 FROM node:22-bookworm-slim AS build
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     YARN_ENABLE_TELEMETRY=0 \
     NODE_OPTIONS=--max-old-space-size=4096
 RUN corepack enable
 WORKDIR /src
-COPY Octane-Renderer/ ./Octane-Renderer/
-COPY Octane/ ./Octane/
+COPY habbinho-client/Octane-Renderer/ ./Octane-Renderer/
+COPY habbinho-client/Octane/ ./Octane/
 RUN cd Octane-Renderer && yarn install
 RUN cd Octane && yarn install && yarn build
 

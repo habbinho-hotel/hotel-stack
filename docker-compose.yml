@@ -1,4 +1,4 @@
-# Hotel (Polaris + Octane) só com o essencial: banco, emulador e cliente web.
+# Hotel (Polaris + habbinho-client) só com o essencial: banco, emulador e cliente web.
 # Uso: ./setup.sh && docker compose build && docker compose up -d
 name: hotel
 
