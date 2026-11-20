@@ -6,10 +6,7 @@ Fica de fora tudo o que o All-in-1 Manager instala além disso: Traefik, NGINX n
 ## Subir
 
 ```bash
-./setup.sh                  # clona os 3 repositórios, cria o .env e a pasta gamedata/
-docker compose build        # compila o JAR e o cliente (a primeira vez demora)
-docker compose up -d
-docker compose logs -f polaris   # espere "Polaris has successfully loaded."
+./setup.sh                  # clona habbinho-emulator e habbinho-client via SSH, prepara os assets e sobe o Docker
 ```
 
 Abra `http://localhost:8080`. Na primeira subida o Polaris cria o schema sozinho (migrations automáticas), então não precisa importar SQL.
@@ -48,7 +45,7 @@ Móveis exigem um token de API da HabboAssets — coloque em `HABBO_API_TOKEN` n
 
 ## Primeiro usuário e admin
 
-Registre uma conta na tela do Octane e dê rank 7 a ela:
+Registre uma conta na tela do Octane. Para conceder acesso de administrador, dê rank 7 à conta:
 
 ```bash
 docker compose exec db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'
@@ -72,7 +69,7 @@ Backup do banco (o backup automático do Polaris está desligado porque a imagem
 docker compose exec db sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"' > backup.sql
 ```
 
-Atualizar para versões novas: `git -C polaris-emulator pull`, `git -C habbinho-client pull`, depois `docker compose build && docker compose up -d`. As migrations rodam sozinhas.
+Atualizar para versões novas: `git -C habbinho-emulator pull`, `git -C habbinho-client pull`, depois `./setup.sh`. As migrations rodam sozinhas.
 
 ## Acessar de outra máquina da rede
 

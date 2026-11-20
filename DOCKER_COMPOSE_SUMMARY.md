@@ -12,7 +12,7 @@
 │   ├── client/Dockerfile     # Builds Octane + Octane-Renderer with Yarn + nginx
 │   └── polaris/entrypoint.sh  # Generates config.ini, starts JVM
 │   └── client/entrypoint.sh   # Generates Octane config JSONs
-├── polaris-emulator/     # Cloned by setup.sh (Git repo)
+├── habbinho-emulator/    # Cloned by setup.sh (Git repo)
 │   ├── config example/    # config.ini.example (template)
 │   ├── Emulator/          # Maven module with JAR source
 │   └── Assets/            # Basic game assets (images, badgeparts)
@@ -129,14 +129,14 @@ services:
 
 ## 🔧 How to Build Octane + Renderer
 
-The `setup.sh` already handles cloning the Polaris emulator and `habbinho-client`, which already contains Octane and Octane-Renderer, then prepares `gamedata/`. The actual build happens when you run `docker compose build`.
+The `setup.sh` clones `habbinho-emulator` and `habbinho-client` (Octane and Octane-Renderer), prepares `gamedata/`, and builds and starts the stack.
 
 But if you need to build locally (outside Docker) or re-build:
 
 ```bash
 # 1. Clone the repos (setup.sh does this, or run manually):
-git clone --depth 1 https://github.com/duckietm/polaris-emulator.git
-git clone --depth 1 https://github.com/habbinho-hotel/habbinho-client.git
+git clone --depth 1 git@github.com:habbinho-hotel/habbinho-emulator.git
+git clone --depth 1 git@github.com:habbinho-hotel/habbinho-client.git
 
 # 2. Install dependencies: Renderer FIRST, then Octane
 cd habbinho-client/Octane-Renderer && yarn install
@@ -245,23 +245,17 @@ EMU_PORT=2096
 ## 🚀 Final Commands to Start Everything
 
 ```bash
-# 1. Prepare everything (clones repos, creates .env, sets up gamedata/ basics)
+# 1. Prepare, build and start the hotel
 ./setup.sh
 
-# 2. Build and start all containers
-docker compose up -d --build
-
-# 3. Wait for Polaris to start (logs show "Polaris has successfully loaded.")
-docker compose logs -f polaris
-
-# 4. Open your browser
+# 2. Open your browser
 open http://localhost:8080
 ```
 
 **First-time flow:**
-1. `setup.sh` clones `polaris-emulator` and `habbinho-client` to the project root
+1. `setup.sh` clones `habbinho-emulator` and `habbinho-client` to the project root
 2. Creates `.env` with random DB passwords
-3. Copies basic assets from `polaris-emulator/Assets/` into `gamedata/`
+3. Copies basic assets from `habbinho-emulator/Assets/` and `UITexts.jsonc` from `habbinho-client` into `gamedata/`
 4. `docker compose build` compiles the Polaris JAR and the Octane build
 5. `docker compose up -d` starts all services
 6. Polaris startup:
@@ -295,8 +289,8 @@ The `gamedata/` folder is the critical piece. Here's what goes where:
 | `room/` | `.json` room definitions | All-in-1 Converter → `Assets/room/` |
 | `icons/` | `.png` icons (catalog) | All-in-1 Converter → `Assets/icons/` |
 | `sounds/` | `.mp3` sounds | All-in-1 Converter → `Assets/sounds/` |
-| `c_images/` | Group badge parts `.png` | From `polaris-emulator/Assets/badgeparts/` (setup.sh copies these) |
-| `images/` | Catalog images `.png` | From `polaris-emulator/Assets/images/` (setup.sh copies these) |
+| `c_images/` | Group badge parts `.png` | From `habbinho-emulator/Assets/badgeparts/` (setup.sh copies these) |
+| `images/` | Catalog images `.png` | From `habbinho-emulator/Assets/images/` (setup.sh copies these) |
 
 ### How to get the assets:
 
@@ -319,8 +313,8 @@ The `setup.sh` already copies the basic images and badgeparts that come in the P
 
 ```bash
 # These are copied automatically by setup.sh:
-cp -rn polaris-emulator/Assets/images/     gamedata/images/
-cp -rn polaris-emulator/Assets/badgeparts/ gamedata/c_images/groupbadge/badgeparts/
+cp -rn habbinho-emulator/Assets/images/     gamedata/images/
+cp -rn habbinho-emulator/Assets/badgeparts/ gamedata/c_images/groupbadge/badgeparts/
 ```
 
 You'll need to add the rest (config JSONs, .hab bundles, catalog assets) yourself via one of the methods above.
@@ -330,23 +324,17 @@ You'll need to add the rest (config JSONs, .hab bundles, catalog assets) yoursel
 ## 🔄 Full Workflow Summary
 
 ```bash
-# Step 1: Prepare (one-time)
-./setup.sh           # clones 3 repos, creates .env, prepares gamedata/ basics
+# Step 1: Prepare, build and start the hotel
+./setup.sh
 
-# Step 2: Build & start
-docker compose up -d --build
-
-# Step 3: Wait for Polaris to finish initializing
-#    (watch logs: docker compose logs -f polaris)
-#    Look for: "Polaris has successfully loaded."
-
-# Step 4: Access the hotel
+# Step 2: Access the hotel
 open http://localhost:8080
 
-# Step 5: First-time admin setup
+# Step 3: Optional administrator setup
 #   Register a new account in the hotel
 #   Then give yourself rank 7 via SQL:
-docker compose exec db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"' -e "UPDATE users SET `rank` = 7 WHERE username = 'SeuNome';"
+docker compose exec db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'
+# Inside MariaDB: UPDATE users SET `rank` = 7 WHERE username = 'SeuNome';
 ```
 
 ---
