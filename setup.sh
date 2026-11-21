@@ -285,9 +285,9 @@ if [ "${HABBO_ASSETS:-0}" = "1" ]; then
     if [ -d gamedata/furniture/nitro ]; then
       mkdir -p gamedata/furniture
       for f in gamedata/furniture/nitro/*.nitro; do
-        [ -f "\$f" ] || continue
-        dst="gamedata/furniture/$(basename "\$f" .nitro).hab"
-        [ -f "\$dst" ] || cp -n "\$f" "\$dst" 2>/dev/null || true
+        [ -f "$f" ] || continue
+        dst="gamedata/furniture/$(basename "$f" .nitro).hab"
+        [ -f "$dst" ] || cp -n "$f" "$dst" 2>/dev/null || true
       done
       echo "  [habboassets] .nitro renomeados para .hab em gamedata/furniture/"
     fi
