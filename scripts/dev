@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+
+usage() {
+  printf '%s\n' 'Uso: ./scripts/dev [up|build|assets|compose|backup]' \
+    'HOTEL_MODE=local usa fontes irmãs. HOTEL_MODE=prod aplica o override HTTPS.'
+}
+
+fail() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
+
+action=${1:-up}
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+case "$action" in
+  up|build|assets|compose|backup) ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+mode=${HOTEL_MODE:-release}
+case "$mode" in
+  release|local|prod) ;;
+  *) fail "HOTEL_MODE inválido: $mode" ;;
+esac
+if [[ $action == build && $mode != local ]]; then
+  fail 'O build das fontes usa HOTEL_MODE=local.'
+fi
+
+release_file=${HOTEL_RELEASE_FILE:-release.env}
+[[ -f $release_file ]] || fail "Manifesto ausente: $release_file"
+while IFS='=' read -r key value || [[ -n $key ]]; do
+  case "$key" in
+    CLIENT_IMAGE|POLARIS_IMAGE|GAMEDATA_VERSION|GAMEDATA_URL|GAMEDATA_SHA256)
+      export "$key=$value"
+      ;;
+  esac
+done < "$release_file"
+
+if [[ $mode == local ]]; then
+  export CLIENT_IMAGE=habbinho/client:local
+  export POLARIS_IMAGE=habbinho/emulator:local
+  if [[ $action == build ]]; then
+    # The Dockerfiles build independently of the assets mounted at runtime.
+    GAMEDATA_DIR=$(pwd)
+  elif [[ -n ${GAMEDATA_DIR:-} ]]; then
+    GAMEDATA_DIR=$(realpath -e -- "$GAMEDATA_DIR")
+    [[ -s $GAMEDATA_DIR/config/FigureData.json && -s $GAMEDATA_DIR/config/UITexts.jsonc ]] ||
+      fail 'GAMEDATA_DIR precisa conter config/FigureData.json e config/UITexts.jsonc.'
+  fi
+elif [[ $action != assets ]]; then
+  image_ref='(:[a-zA-Z0-9_.-]+)?@sha256:[0-9a-f]{64}'
+  if ! [[ ${CLIENT_IMAGE:-} =~ ^ghcr\.io/habbinho-hotel/habbinho-client${image_ref}$ &&
+          ${POLARIS_IMAGE:-} =~ ^ghcr\.io/habbinho-hotel/habbinho-emulator${image_ref}$ ]]; then
+    fail 'Preencha os digests do GHCR em release.env. Para testar as fontes com um pack revisado, use GAMEDATA_DIR=/caminho make local.'
+  fi
+fi
+
+if [[ $mode != local || -z ${GAMEDATA_DIR:-} ]]; then
+  if ! [[ ${GAMEDATA_VERSION:-} =~ ^[[:alnum:]][[:alnum:]._-]*$ &&
+          ${GAMEDATA_SHA256:-} =~ ^[0-9a-f]{64}$ && ${GAMEDATA_URL:-} == https://* ]]; then
+    fail 'Configure versão, URL HTTPS e SHA-256 do pack autorizado em release.env, ou informe GAMEDATA_DIR no modo local.'
+  fi
+  GAMEDATA_DIR="$(pwd)/.cache/gamedata/$GAMEDATA_VERSION"
+  if [[ $action == up || $action == assets ]]; then
+    ./scripts/fetch-gamedata "$GAMEDATA_DIR"
+  fi
+fi
+export GAMEDATA_DIR
+if [[ $action == assets ]]; then
+  printf '%s\n' "$GAMEDATA_DIR"
+  exit 0
+fi
+
+env_file=${HOTEL_ENV_FILE:-.env.hotel}
+if [[ $mode == prod && -z ${HOTEL_ENV_FILE:-} ]]; then
+  fail 'Informe o arquivo privado de produção em HOTEL_ENV_FILE.'
+fi
+if [[ ! -f $env_file ]]; then
+  [[ $env_file == .env.hotel ]] || fail "Arquivo de ambiente ausente: $env_file"
+  tmp=$(mktemp .env.hotel.XXXXXX)
+  trap 'rm -f -- "$tmp"' EXIT
+  cat .env.runtime.example > "$tmp"
+  printf '\nDB_ROOT_PASSWORD=%s\nDB_PASSWORD=%s\n' \
+    "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" >> "$tmp"
+  ln -T -- "$tmp" "$env_file" || [[ -f $env_file ]]
+  rm -f -- "$tmp"
+  trap - EXIT
+fi
+
+compose=(docker compose -p "${HOTEL_PROJECT_NAME:-habbinho-$mode}" --env-file "$env_file" -f compose.images.yaml)
+case "$mode" in
+  local) compose+=(-f compose.dev.yaml) ;;
+  prod) compose+=(-f compose.prod.yaml) ;;
+esac
+
+case "$action" in
+  up)
+    if [[ $mode == local ]]; then
+      COMPOSE_PARALLEL_LIMIT=${COMPOSE_PARALLEL_LIMIT:-1} "${compose[@]}" up -d --build --wait --wait-timeout 360 "$@"
+    else
+      "${compose[@]}" up -d --wait --wait-timeout 360 "$@"
+    fi
+    ;;
+  build)
+    COMPOSE_PARALLEL_LIMIT=${COMPOSE_PARALLEL_LIMIT:-1} "${compose[@]}" build "$@"
+    ;;
+  compose)
+    [[ $# -gt 0 ]] || fail 'Informe um subcomando do Docker Compose.'
+    "${compose[@]}" "$@"
+    ;;
+  backup)
+    umask 077
+    mkdir -p .backups
+    backup=$(mktemp '.backups/.incoming.XXXXXX')
+    trap 'rm -f -- "$backup"' EXIT
+    # shellcheck disable=SC2016 # These variables expand inside the database container.
+    if "${compose[@]}" exec -T db sh -c '
+      MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb-dump -uroot --lock-all-tables \
+        --routines --events --triggers "$MARIADB_DATABASE"
+    ' > "$backup"; then
+      archive=".backups/habbo-$(date -u +%Y%m%dT%H%M%SZ)-${backup##*.}.sql"
+      mv -T -- "$backup" "$archive"
+      printf '%s\n' "$archive"
+    else
+      fail 'Falha ao exportar o banco.'
+    fi
+    ;;
+esac

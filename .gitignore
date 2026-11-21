@@ -4,3 +4,6 @@ gamedata/
 /.cache/
 /habbinho-client/
 /habbinho-emulator/
+/.env.hotel
+/.env.hotel.*
+/.backups/

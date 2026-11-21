@@ -2,7 +2,10 @@
 **/node_modules
 **/dist
 **/target
-.env
+**/.env
+.env.hotel
+.env.hotel.*
+.backups
 gamedata
 .cache
 polaris-emulator

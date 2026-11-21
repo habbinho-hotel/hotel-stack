@@ -1,0 +1,15 @@
+services:
+  polaris:
+    build:
+      context: ${EMULATOR_SOURCE_DIR:-../habbinho-emulator}
+    develop:
+      watch:
+        - action: rebuild
+          path: ${EMULATOR_SOURCE_DIR:-../habbinho-emulator}/Emulator
+          ignore:
+            - target/
+        - action: rebuild
+          path: "${EMULATOR_SOURCE_DIR:-../habbinho-emulator}/config example/config.ini.example"
+  client:
+    build:
+      context: ${CLIENT_SOURCE_DIR:-../habbinho-client}

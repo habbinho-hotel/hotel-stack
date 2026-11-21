@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+url=${1:-http://localhost:8080}
+url=${url%/}
+curl --fail --silent --show-error --max-time 10 --retry 8 --retry-connrefused --retry-delay 2 \
+  "$url/api/health" | python3 -c 'import json, sys; sys.exit(json.load(sys.stdin).get("status") != "ok")'
+config=$(curl --fail --silent --show-error --max-time 10 "$url/configuration/renderer-config.json")
+ws_url="${url/http/ws}/ws"
+python3 -c '
+import json, sys
+config = json.load(sys.stdin)
+for key, value in (("socket.url", sys.argv[1]), ("api.url", sys.argv[2])):
+    if config.get(key) != value:
+        sys.exit(f"URL incorreta para {key}; esperado {value}")
+' "$ws_url" "$url" <<< "$config"
+for entry in FigureData.json UITexts.jsonc; do
+  curl --fail --silent --show-error --max-time 10 --output /dev/null "$url/gamedata/config/$entry"
+done
+
+status=0
+http_code=$(curl --silent --max-time 3 --http1.1 --output /dev/null --write-out '%{http_code}' \
+  --header "Origin: $url" \
+  --header 'Connection: Upgrade' --header 'Upgrade: websocket' \
+  --header 'Sec-WebSocket-Version: 13' --header "Sec-WebSocket-Key: $(openssl rand -base64 16)" \
+  "$url/ws") || status=$?
+if [[ $http_code != 101 || ( $status != 0 && $status != 28 ) ]]; then
+  printf 'O upgrade WebSocket em /ws retornou HTTP %s (curl %s).\n' "$http_code" "$status" >&2
+  exit 1
+fi
+printf 'API, configuração Octane, assets e upgrade WebSocket disponíveis em %s\n' "$url"

@@ -1,0 +1,74 @@
+services:
+  db:
+    image: ${MARIADB_IMAGE:-mariadb:11.4}
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: habbo
+      MARIADB_USER: polaris
+      MARIADB_PASSWORD: ${DB_PASSWORD:?configure DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?configure DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  polaris:
+    image: ${POLARIS_IMAGE:?configure POLARIS_IMAGE}
+    restart: unless-stopped
+    stop_grace_period: 45s
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOTEL_DB_HOST: db
+      HOTEL_DB_NAME: habbo
+      HOTEL_DB_USER: polaris
+      HOTEL_DB_PASSWORD: ${DB_PASSWORD:?configure DB_PASSWORD}
+      HOTEL_PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx2g}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - polaris-data:/data
+      - type: bind
+        source: ${GAMEDATA_DIR:?configure GAMEDATA_DIR}
+        target: /var/www/gamedata
+        read_only: true
+        bind:
+          create_host_path: false
+
+  client:
+    image: ${CLIENT_IMAGE:?configure CLIENT_IMAGE}
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost:8080}
+      PUBLIC_WS_URL: ${PUBLIC_WS_URL:-ws://localhost:8080/ws}
+    volumes:
+      - type: bind
+        source: ${GAMEDATA_DIR:?configure GAMEDATA_DIR}
+        target: /usr/share/nginx/gamedata
+        read_only: true
+        bind:
+          create_host_path: false
+
+  edge:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    environment:
+      HOTEL_SITE: "${HOTEL_SITE:-:80}"
+    ports:
+      - "${HTTP_BIND:-127.0.0.1:8080}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  polaris-data:
+  caddy-data:
+  caddy-config:

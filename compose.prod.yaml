@@ -1,0 +1,25 @@
+services:
+  polaris:
+    environment:
+      HOTEL_PUBLIC_URL: ${PUBLIC_URL:?configure a URL HTTPS em produção}
+  client:
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?configure a URL HTTPS em produção}
+      PUBLIC_API_URL: ${PUBLIC_URL:?configure a URL HTTPS em produção}
+      PUBLIC_WS_URL: ${PUBLIC_WS_URL:?configure a URL WSS em produção}
+  edge:
+    environment:
+      HOTEL_SITE: ${HOTEL_SITE:?configure o domínio em produção}
+    ports: !override
+      - "80:80"
+      - "443:443"
+    networks:
+      default:
+        ipv4_address: ${HOTEL_PROXY_IP:-172.30.89.2}
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${HOTEL_SUBNET:-172.30.89.0/24}
+          ip_range: ${HOTEL_DYNAMIC_RANGE:-172.30.89.128/25}

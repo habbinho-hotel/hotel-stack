@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 022
+
+dest=${1:?informe o diretório de destino}
+cache=$(dirname "$dest")
+mkdir -p "$cache"
+exec 9>"$cache/.lock"
+flock 9
+
+if [[ -e $dest || -L $dest ]]; then
+  if [[ -f $dest/.pack.sha256 && $(cat "$dest/.pack.sha256") == "$GAMEDATA_SHA256" ]]; then
+    exit 0
+  fi
+  printf 'Cache existente sem o SHA-256 esperado: %s\n' "$dest" >&2
+  exit 1
+fi
+
+tmp=$(mktemp -d "$cache/.incoming.XXXXXX")
+trap 'rm -rf -- "$tmp"' EXIT
+archive="$tmp/gamedata.tar.gz"
+curl --proto '=https' --proto-redir '=https' --fail --silent --show-error --connect-timeout 15 \
+  --location --retry 3 "$GAMEDATA_URL" --output "$archive"
+if ! printf '%s  %s\n' "$GAMEDATA_SHA256" "$archive" | sha256sum --check --status; then
+  printf 'SHA-256 do gamedata diverge do manifesto da release.\n' >&2
+  exit 1
+fi
+
+pack="$tmp/pack"
+mkdir "$pack"
+python3 - "$archive" "$pack" <<'PY'
+import shutil
+import sys
+import tarfile
+from pathlib import Path, PurePosixPath
+
+archive, output = sys.argv[1:]
+with tarfile.open(archive, "r:gz") as package:
+    for member in package:
+        path = PurePosixPath(member.name)
+        if path.is_absolute() or not path.parts or ".." in path.parts:
+            sys.exit(f"Caminho inválido no gamedata: {member.name}")
+        target = Path(output, *path.parts)
+        if member.isdir():
+            target.mkdir(parents=True, exist_ok=True)
+        elif member.isfile():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with package.extractfile(member) as source, target.open("xb") as destination:
+                shutil.copyfileobj(source, destination)
+        else:
+            sys.exit(f"Tipo de arquivo inválido no gamedata: {member.name}")
+
+for filename in ("FigureData.json", "UITexts.jsonc"):
+    path = Path(output, "config", filename)
+    if not path.is_file() or not path.stat().st_size:
+        sys.exit(f"Arquivo obrigatório ausente no gamedata: config/{filename}")
+PY
+printf '%s\n' "$GAMEDATA_SHA256" > "$pack/.pack.sha256"
+mv -T -- "$pack" "$dest"

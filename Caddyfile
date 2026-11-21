@@ -1,0 +1,5 @@
+{$HOTEL_SITE} {
+    @polaris path /ws /api /api/*
+    reverse_proxy @polaris polaris:2096
+    reverse_proxy client:80
+}

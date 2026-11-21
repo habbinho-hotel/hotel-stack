@@ -1,0 +1,49 @@
+name: Stack CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validate the scripts and Makefile
+        run: |
+          bash -n setup.sh
+          shellcheck scripts/dev scripts/fetch-gamedata scripts/smoke
+          make --dry-run up local build watch assets logs ps down backup smoke
+      - name: Render all Compose variants
+        env:
+          CLIENT_IMAGE: example/client:test
+          POLARIS_IMAGE: example/polaris:test
+          DB_PASSWORD: test
+          DB_ROOT_PASSWORD: test
+          GAMEDATA_DIR: .
+        run: |
+          docker compose -f compose.images.yaml config --quiet
+          docker compose -f compose.images.yaml -f compose.dev.yaml config --quiet
+          HOTEL_SITE=hotel.example PUBLIC_URL=https://hotel.example PUBLIC_WS_URL=wss://hotel.example/ws \
+            docker compose -f compose.images.yaml -f compose.prod.yaml config --quiet
+      - name: Smoke test a pinned release
+        run: |
+          if grep -qE '^(CLIENT_IMAGE|POLARIS_IMAGE|GAMEDATA_VERSION|GAMEDATA_URL|GAMEDATA_SHA256)=.+' release.env; then
+            make up
+            make smoke
+          else
+            echo "Smoke skipped until the first manifest is populated."
+          fi
+      - name: Stop the smoke test
+        if: always()
+        run: |
+          if test -f .env.hotel; then
+            make down
+          fi
